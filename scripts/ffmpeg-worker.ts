@@ -125,8 +125,8 @@ createServer(async (req, res) => {
     console.error("Worker failed:", error)
     res.writeHead(500).end("Worker error")
   }
-}).listen(PORT, () => {
-  console.log(`FFmpeg worker listening on :${PORT}`)
+}).listen(PORT, "0.0.0.0", () => {
+ console.log(`FFmpeg worker listening on :${PORT} (public)`)
 })
 
 async function processJob(payload: RenderJobPayload) {

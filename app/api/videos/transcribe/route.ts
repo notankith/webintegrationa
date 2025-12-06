@@ -94,14 +94,34 @@ export async function POST(request: NextRequest) {
     const reuseExistingTranscript = !body.forceRefresh && !body.override
 
     if (reuseExistingTranscript) {
-      const existingTranscript = await db.collection("transcripts")
-        .find({ upload_id: body.uploadId, user_id: userId })
-        .sort({ created_at: -1 })
-        .limit(1)
-        .toArray()
+      let transcript = null
 
-      if (existingTranscript.length > 0) {
-        const transcript = existingTranscript[0]
+      // Priority 1: Fetch by latest_transcript_id if available
+      if (upload.latest_transcript_id) {
+        try {
+          transcript = await db.collection("transcripts").findOne({
+            _id: new ObjectId(upload.latest_transcript_id),
+            user_id: userId
+          })
+        } catch (e) {
+          console.warn("Invalid latest_transcript_id", upload.latest_transcript_id)
+        }
+      }
+
+      // Priority 2: Fallback to most recently created transcript
+      if (!transcript) {
+        const existingTranscripts = await db.collection("transcripts")
+          .find({ upload_id: body.uploadId, user_id: userId })
+          .sort({ created_at: -1 })
+          .limit(1)
+          .toArray()
+        
+        if (existingTranscripts.length > 0) {
+          transcript = existingTranscripts[0]
+        }
+      }
+
+      if (transcript) {
         const previewPayload = await buildPreviewResponse({
           upload,
           transcript: {

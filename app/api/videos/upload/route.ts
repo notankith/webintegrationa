@@ -4,9 +4,7 @@ import { RETENTION_WINDOW_DAYS, STORAGE_PREFIX } from "@/lib/pipeline"
 import { z } from "zod"
 import { type NextRequest, NextResponse } from "next/server"
 import { ObjectId } from "mongodb"
-import jwt from "jsonwebtoken"
-
-const JWT_SECRET = process.env.JWT_SECRET || process.env.WORKER_JWT_SECRET || "default-secret-key-change-me"
+import { getCurrentUser } from "@/lib/auth"
 
 const requestSchema = z.object({
   fileName: z.string().min(1),
@@ -23,16 +21,8 @@ export async function POST(request: NextRequest) {
     const db = await getDb()
 
     // Get userId from token if available, otherwise fallback to body or default
-    let userId = body.userId || "default-user"
-    const token = request.cookies.get("auth_token")?.value
-    if (token) {
-      try {
-        const decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
-        userId = decoded.userId
-      } catch (e) {
-        // Invalid token, ignore
-      }
-    }
+    const user = await getCurrentUser()
+    const userId = user?.userId || body.userId || "default-user"
 
     const uploadId = new ObjectId().toString()
     const sanitizedName = body.fileName.replace(/[^a-zA-Z0-9._-]/g, "_")

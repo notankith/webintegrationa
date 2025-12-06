@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic"
 export default async function SettingsPage() {
   const currentUser = await getCurrentUser()
   if (!currentUser) {
-    redirect("/auth/login")
+    redirect("/auth/login?error=session_expired")
   }
 
   const db = await getDb()
@@ -18,7 +18,7 @@ export default async function SettingsPage() {
   const user = await db.collection("users").findOne({ _id: new ObjectId(currentUser.userId) })
   
   if (!user) {
-    redirect("/auth/login")
+    redirect("/auth/login?error=account_not_found")
   }
 
   // Map user data to profile format expected by components

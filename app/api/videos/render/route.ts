@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     // Extended Emoji Trigger System
     const EMOJI_MAP: Record<string, string> = {
       // Money / Wealth
-      "money": "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f4b0.png",
+      "money": "https://raw.githubusercontent.com/notankith/cloudinarytest/refs/heads/main/Money.gif",
       "cash": "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f4b5.png",
       "rich": "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f4b8.png",
       "wealth": "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f4b8.png",

@@ -444,7 +444,14 @@ export function PostUploadWorkspace({ uploadId }: PostUploadWorkspaceProps) {
         let newWords = segment.words
         if (patch.text !== undefined && patch.text !== segment.text) {
           const tokens = patch.text.split(/\s+/).map((t) => t.trim()).filter(Boolean)
-          if (tokens.length > 0) {
+          
+          // Optimization: If word count matches, preserve timings
+          if (segment.words && segment.words.length === tokens.length) {
+             newWords = segment.words.map((w, i) => ({
+               ...w,
+               text: tokens[i]
+             }))
+          } else if (tokens.length > 0) {
             const duration = segment.end - segment.start
             const perToken = duration / tokens.length
             newWords = tokens.map((token, i) => ({
@@ -488,7 +495,7 @@ export function PostUploadWorkspace({ uploadId }: PostUploadWorkspaceProps) {
   }
 
   const handleAddSegment = () => {
-    // Sort segments by start time
+    // Sort segments by start time to find insertion point
     const sorted = [...captionSegments].sort((a, b) => a.start - b.start)
     
     // Find the reference segment (selected or current time)
@@ -540,32 +547,45 @@ export function PostUploadWorkspace({ uploadId }: PostUploadWorkspaceProps) {
       text: "New caption",
     }
 
-    // Insert new segment without shifting others
-    const updatedSegments = [...sorted, newSegment]
-    updatedSegments.sort((a, b) => a.start - b.start)
+    // CRITICAL FIX: Add to BASE segments (unchunked), not the current view (chunks)
+    // We must ensure baseSegmentsRef is up to date.
+    const updatedBase = [...baseSegmentsRef.current, newSegment]
+    updatedBase.sort((a, b) => a.start - b.start)
+    baseSegmentsRef.current = updatedBase
 
-    // Update state
-    baseSegmentsRef.current = updatedSegments
+    // Reshape from baseSegmentsRef for current template
+    const templateForShape = selectedTemplateOption ?? defaultTemplates[0]
+    const newReshaped = reshapeSegmentsForTemplate(baseSegmentsRef.current, templateForShape.renderTemplate, templateForShape.id)
+    setCaptionSegments(newReshaped)
+    
+    // Select the new segment (or its first chunk)
+    // Since we generated the ID, we can look for it.
+    // If it was chunked, the ID will start with the base ID.
+    const newChunk = newReshaped.find(s => String(s.id).startsWith(newSegment.id))
+    if (newChunk) {
+      setSelectedSegmentId(newChunk.id)
+    } else {
+      setSelectedSegmentId(newSegment.id)
+    }
+
+    seekToTime(start)
+    invalidateRender()
+  }
+
+  const handleDeleteSegment = (segmentId: string) => {
+    // Resolve base ID (handle chunk IDs like "segment_123_ck_0")
+    const baseId = String(segmentId).includes("_ck_") ? String(segmentId).split("_ck_")[0] : String(segmentId)
+
+    // Remove from baseSegmentsRef
+    baseSegmentsRef.current = baseSegmentsRef.current.filter((segment) => String(segment.id) !== baseId)
     
     // Reshape from baseSegmentsRef for current template
     const templateForShape = selectedTemplateOption ?? defaultTemplates[0]
     setCaptionSegments(
       reshapeSegmentsForTemplate(baseSegmentsRef.current, templateForShape.renderTemplate, templateForShape.id)
     )
-    setSelectedSegmentId(newSegment.id)
-    seekToTime(start)
-    invalidateRender()
-  }
-
-  const handleDeleteSegment = (segmentId: string) => {
-    // Remove from baseSegmentsRef
-    baseSegmentsRef.current = baseSegmentsRef.current.filter((segment) => segment.id !== segmentId)
-    // Reshape from baseSegmentsRef for current template
-    const templateForShape = selectedTemplateOption ?? defaultTemplates[0]
-    setCaptionSegments(
-      reshapeSegmentsForTemplate(baseSegmentsRef.current, templateForShape.renderTemplate, templateForShape.id)
-    )
-    if (selectedSegmentId === segmentId) {
+    
+    if (selectedSegmentId === segmentId || (selectedSegmentId && String(selectedSegmentId).startsWith(baseId))) {
       setSelectedSegmentId(null)
     }
     invalidateRender()

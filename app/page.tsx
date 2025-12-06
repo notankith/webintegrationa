@@ -2,8 +2,10 @@ import { Button } from "@/components/ui/button"
 import { Check, Play, Zap, Globe, Sparkles, ArrowRight } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { getCurrentUser } from "@/lib/auth"
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const user = await getCurrentUser()
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
       {/* Navigation */}
@@ -14,12 +16,20 @@ export default function LandingPage() {
             <span className="text-2xl font-bold text-foreground">AutoCaps</span>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/auth/login">
-              <Button variant="ghost">Login</Button>
-            </Link>
-            <Link href="/auth/sign-up">
-              <Button className="bg-primary hover:bg-primary/90">Get Started</Button>
-            </Link>
+            {user ? (
+              <Link href="/dashboard">
+                <Button className="bg-primary hover:bg-primary/90">Dashboard</Button>
+              </Link>
+            ) : (
+              <>
+                <Link href="/auth/login">
+                  <Button variant="ghost">Login</Button>
+                </Link>
+                <Link href="/auth/sign-up">
+                  <Button className="bg-primary hover:bg-primary/90">Get Started</Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>

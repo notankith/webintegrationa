@@ -1,20 +1,23 @@
 import type React from "react"
 import { Sidebar } from "@/components/dashboard/sidebar"
+import { getCurrentUser } from "@/lib/auth"
+import { redirect } from "next/navigation"
 
 /**
  * Dashboard Layout
  * 
- * TODO: Implement proper auth check with MongoDB/JWT
- * Currently allows all access - auth checking should be done in middleware
- * or by checking localStorage/cookies for valid session
+ * Includes server-side auth check to ensure protected access
  */
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // TODO: Add auth verification here
-  // For now, client-side auth check in components or middleware
+  const user = await getCurrentUser()
+
+  if (!user) {
+    redirect("/auth/login?callbackUrl=/dashboard")
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
